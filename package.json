@@ -1,0 +1,38 @@
+{
+  "name": "uni-planner",
+  "version": "1.0.0",
+  "description": "A responsive academic planner app for university students.",
+  "main": "index.js",
+  "private": true,
+  "workspaces": [
+    "packages/api",
+    "packages/web"
+  ],
+  "scripts": {
+    "dev": "npm run dev --workspace=api & npm run dev --workspace=web",
+    "start": "npm start --workspace=api",
+    "start:api": "npm run build:api && node packages/api/dist/bundle.js",
+    "build": "npm run build --workspace=web",
+    "build:api": "node build.js",
+    "test": "npm test --workspaces --if-present"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ZUENS2020/Uni.git"
+  },
+  "keywords": [
+    "react",
+    "node",
+    "mysql",
+    "academic-planner"
+  ],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ZUENS2020/Uni/issues"
+  },
+  "homepage": "https://github.com/ZUENS2020/Uni#readme",
+  "devDependencies": {
+    "esbuild": "^0.25.9"
+  }
+}

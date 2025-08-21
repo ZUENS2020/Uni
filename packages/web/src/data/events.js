@@ -1,0 +1,42 @@
+export const mockEvents = [
+  {
+    id: 0,
+    title: 'CS101: Introduction to Computer Science',
+    start: new Date(2025, 8, 22, 9, 0, 0),
+    end: new Date(2025, 8, 22, 10, 30, 0),
+    allDay: false,
+    resource: 'course',
+  },
+  {
+    id: 1,
+    title: 'MATH203: Advanced Calculus',
+    start: new Date(2025, 8, 22, 11, 0, 0),
+    end: new Date(2025, 8, 22, 12, 30, 0),
+    allDay: false,
+    resource: 'course',
+  },
+  {
+    id: 2,
+    title: 'PHYS101: General Physics I',
+    start: new Date(2025, 8, 24, 9, 0, 0),
+    end: new Date(2025, 8, 24, 10, 30, 0),
+    allDay: false,
+    resource: 'course',
+  },
+  {
+    id: 3,
+    title: 'Study Group for CS101',
+    start: new Date(2025, 8, 23, 14, 0, 0),
+    end: new Date(2025, 8, 23, 16, 0, 0),
+    allDay: false,
+    resource: 'event',
+  },
+  {
+    id: 4,
+    title: 'Career Fair',
+    start: new Date(2025, 8, 25, 10, 0, 0),
+    end: new Date(2025, 8, 25, 17, 0, 0),
+    allDay: true,
+    resource: 'event',
+  },
+];
