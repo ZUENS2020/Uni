@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CTF File Analyzer | CTF文件分析器</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <header>
+        <h1>CTF File Analyzer | CTF文件分析器</h1>
+    </header>
+
+    <main>
+        <section id="upload-section">
+            <h2>1. Upload File | 上传文件</h2>
+            <div id="drop-zone">
+                <p>Drag & drop a file here, or click to select a file.</p>
+                <p>将文件拖拽至此，或点击选择文件。</p>
+                <input type="file" id="file-input" hidden>
+            </div>
+            <div id="loading-indicator" class="hidden">
+                <div class="spinner"></div>
+                <p>Analyzing... | 分析中...</p>
+            </div>
+        </section>
+
+        <section id="results-section" class="hidden">
+            <h2>2. Analysis Results | 分析结果</h2>
+
+            <div id="error-display" class="hidden"></div>
+
+            <div class="result-grid">
+                <!-- Basic Info -->
+                <div class="result-card" id="info-card">
+                    <h3>File Summary | 文件摘要</h3>
+                    <div id="summary-info"></div>
+                </div>
+
+                <!-- Findings -->
+                <div class="result-card" id="findings-card">
+                    <h3>Key Findings | 关键发现</h3>
+                    <div id="findings-list"></div>
+                </div>
+            </div>
+
+            <!-- Hex/ASCII Preview -->
+            <div class="result-card">
+                <h3>Hex & ASCII Preview | 十六进制与ASCII预览</h3>
+                <div id="hex-preview-container" class="mono-font"></div>
+            </div>
+
+            <!-- Extracted Strings -->
+            <div class="result-card">
+                <h3>Extracted Strings | 提取字符串</h3>
+                <div id="strings-container" class="mono-font"></div>
+            </div>
+
+            <!-- Metadata -->
+            <div class="result-card">
+                <h3>Metadata | 元数据</h3>
+                <div id="metadata-container" class="mono-font"></div>
+            </div>
+
+        </section>
+    </main>
+
+    <footer>
+        <p>Jules - AI Software Engineer</p>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

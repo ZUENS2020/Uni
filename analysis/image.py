@@ -1,113 +1,105 @@
+import exifread
+import numpy as np
 from PIL import Image
-import io
-import math
-from collections import Counter
 
-def calculate_lsb_entropy(img):
+def calculate_entropy(data):
+    """Helper function to calculate Shannon entropy."""
+    if not isinstance(data, np.ndarray):
+        # If data is not a numpy array, convert it from bytes
+        data = np.frombuffer(data, dtype=np.uint8)
+
+    if data.size == 0:
+        return 0.0
+
+    counts = np.bincount(data, minlength=256)
+    probabilities = counts[counts > 0] / data.size
+    entropy = -np.sum(probabilities * np.log2(probabilities))
+    return entropy
+
+def analyze_image(file_stream):
     """
-    Extracts the LSB plane of an image and calculates its Shannon entropy.
-    """
-    if img.mode not in ('RGB', 'RGBA'):
-        # Only analyze modes with distinct color channels for simplicity
-        return None, "Unsupported image mode for LSB analysis."
+    对图像文件进行深度分析
+    Performs a deep analysis of an image file.
 
-    pixels = list(img.getdata())
-
-    # Extract LSBs from each channel (R, G, B)
-    lsb_data = []
-    for pixel in pixels:
-        for i in range(3): # For R, G, B channels
-            lsb_data.append(pixel[i] & 1)
-
-    # Convert list of bits to a byte string for entropy calculation
-    # We pack 8 bits into a byte.
-    lsb_bytes = bytearray()
-    for i in range(0, len(lsb_data), 8):
-        byte_chunk = lsb_data[i:i+8]
-        byte_val = 0
-        for bit in byte_chunk:
-            byte_val = (byte_val << 1) | bit
-        lsb_bytes.append(byte_val)
-
-    if not lsb_bytes:
-        return 0.0, None
-
-    # Calculate entropy of the LSB data
-    entropy = 0
-    length = len(lsb_bytes)
-    counts = Counter(lsb_bytes)
-
-    for count in counts.values():
-        p_x = count / length
-        entropy -= p_x * math.log2(p_x)
-
-    return entropy, None
-
-def analyze_image(data):
-    """
-    Performs in-depth analysis of an image file from a byte string.
+    :param file_stream: A file-like object (stream) of the image file.
+    :return: A tuple containing a list of findings and a dictionary of metadata.
     """
     findings = []
     metadata = {}
 
     try:
-        img = Image.open(io.BytesIO(data))
+        file_stream.seek(0)
+        # 1. EXIF Metadata using exifread
+        try:
+            exif_tags = exifread.process_file(file_stream, details=True, strict=False)
+            if exif_tags:
+                metadata['EXIF'] = {}
+                for tag, value in exif_tags.items():
+                    if tag not in ('JPEGThumbnail', 'TIFFThumbnail'): # Exclude thumbnails
+                        try:
+                            metadata['EXIF'][tag] = str(value)
+                        except Exception:
+                            metadata['EXIF'][tag] = repr(value)
+        except Exception as e:
+            # This can fail on images without EXIF data, which is fine.
+            pass
+
+        file_stream.seek(0)
+        # 2. Analysis using Pillow
+        with Image.open(file_stream) as img:
+            # General image info
+            metadata['General'] = {
+                "Format": img.format,
+                "Mode": img.mode,
+                "Size": f"{img.width}x{img.height}"
+            }
+
+            # Other metadata (XMP, etc.)
+            for key, value in img.info.items():
+                if key != 'exif': # Already handled by exifread which is more thorough
+                    try:
+                        metadata[key.upper()] = str(value)
+                    except Exception:
+                         metadata[key.upper()] = repr(value)
+
+            # 3. LSB Steganography Analysis
+            if img.mode in ('RGB', 'RGBA'):
+                # Convert to numpy array
+                np_img = np.array(img)
+
+                # Get the LSB plane for each channel
+                lsb_plane_r = (np_img[:, :, 0] & 1) * 255
+                lsb_plane_g = (np_img[:, :, 1] & 1) * 255
+                lsb_plane_b = (np_img[:, :, 2] & 1) * 255
+
+                # Calculate entropy of each LSB plane
+                entropy_r = calculate_entropy(lsb_plane_r.flatten())
+                entropy_g = calculate_entropy(lsb_plane_g.flatten())
+                entropy_b = calculate_entropy(lsb_plane_b.flatten())
+
+                avg_entropy = (entropy_r + entropy_g + entropy_b) / 3
+
+                metadata['LSB_Analysis'] = {
+                    "Red_Channel_Entropy": round(entropy_r, 4),
+                    "Green_Channel_Entropy": round(entropy_g, 4),
+                    "Blue_Channel_Entropy": round(entropy_b, 4),
+                    "Average_Entropy": round(avg_entropy, 4)
+                }
+
+                # High entropy in LSB plane is a strong indicator of steganography
+                if avg_entropy > 7.0: # Threshold for high entropy can be tuned
+                    findings.append({
+                        "type": "Potential LSB Steganography",
+                        "severity": "WARNING",
+                        "description": f"The average entropy of the Least Significant Bit (LSB) planes is unusually high ({avg_entropy:.4f}).",
+                        "hint": "High entropy in LSB planes can indicate the presence of hidden data. Consider using a steganography tool to extract it."
+                    })
+
     except Exception as e:
         findings.append({
-            "type": "INVALID_IMAGE_FILE",
-            "severity": "WARNING",
-            "description": f"Could not open file as an image. Error: {e}",
-        })
-        return findings, metadata
-
-    # 1. Extract Metadata
-    if img.info:
-        for key, value in img.info.items():
-            # Some metadata can be long byte strings, so we decode safely
-            if isinstance(value, bytes):
-                metadata[key] = value.decode('utf-8', 'ignore')
-            else:
-                metadata[key] = str(value) # Ensure value is serializable
-
-        findings.append({
-            "type": "IMAGE_METADATA",
-            "severity": "INFO",
-            "description": "Found metadata in the image file.",
-            "value": metadata
-        })
-
-    # 2. LSB Steganography Detection via Entropy Analysis
-    try:
-        entropy, error = calculate_lsb_entropy(img)
-        if error:
-            findings.append({
-                "type": "LSB_ANALYSIS_SKIPPED",
-                "severity": "INFO",
-                "description": f"LSB analysis was skipped: {error}",
-            })
-        elif entropy is not None:
-            # A high entropy for the LSB plane is a strong indicator of steganography
-            # A threshold of 7.5 is chosen (max entropy is 8.0 for random bytes)
-            if entropy > 7.5:
-                findings.append({
-                    "type": "LSB_ANOMALY",
-                    "severity": "HIGH",
-                    "description": f"High entropy ({entropy:.4f}/8.0) detected in the LSB plane of the image. This strongly suggests LSB steganography.",
-                    "hint": "Use a steganography tool like zsteg, stegsolve, or an online LSB extractor to retrieve the hidden data.",
-                    "value": {"entropy": f"{entropy:.4f}"}
-                })
-            else:
-                 findings.append({
-                    "type": "LSB_ANALYSIS",
-                    "severity": "INFO",
-                    "description": f"LSB plane entropy is {entropy:.4f}/8.0. No obvious signs of random data (steganography).",
-                    "value": {"entropy": f"{entropy:.4f}"}
-                })
-    except Exception as e:
-         findings.append({
-            "type": "LSB_ANALYSIS_ERROR",
-            "severity": "WARNING",
-            "description": f"An error occurred during LSB analysis: {e}",
+            "type": "Image Analysis Error",
+            "severity": "ERROR",
+            "description": f"An unexpected error occurred during image analysis: {str(e)}",
         })
 
     return findings, metadata
