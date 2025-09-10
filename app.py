@@ -1,5 +1,5 @@
 import hashlib
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, render_template
 
 # Import all our analysis modules
 from analysis.common import calculate_entropy, extract_strings, find_flags, get_hex_preview
@@ -11,6 +11,10 @@ app = Flask(__name__)
 
 # Set a file size limit (e.g., 50MB) to prevent server overload
 app.config['MAX_CONTENT_LENGTH'] = 50 * 1024 * 1024
+
+@app.route('/')
+def index():
+    return render_template('index.html')
 
 @app.route('/ctf_analyze', methods=['POST'])
 def ctf_analyze_endpoint():
